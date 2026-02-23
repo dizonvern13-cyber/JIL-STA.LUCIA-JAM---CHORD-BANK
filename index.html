@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Full Setlist App</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 15px; background: #121212; color: #e0e0e0; margin: 0; }
+        .container { max-width: 800px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #bb86fc; margin-bottom: 20px; }
+        
+        .header-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        label { font-weight: bold; font-size: 13px; color: #bb86fc; display: block; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; box-sizing: border-box; background: #2c2c2c; color: #fff; font-size: 14px; }
+
+        /* Song Section Styling */
+        .song-section { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #bb86fc; }
+        .song-section.opening { border-left-color: #03dac6; }
+        .song-section.praise { border-left-color: #6200ee; }
+        .song-section.worship { border-left-color: #cf6679; }
+        h3 { margin-top: 0; font-size: 16px; color: #bb86fc; }
+
+        textarea { height: 100px; font-family: 'Courier New', monospace; font-size: 15px; margin-top: 5px; }
+
+        .controls { display: flex; gap: 10px; margin: 20px 0; }
+        button { padding: 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; flex: 1; transition: 0.3s; }
+        .btn-green { background: #03dac6; color: #000; }
+        .btn-red { background: #cf6679; }
+        
+        .history { border-top: 2px solid #333; margin-top: 25px; padding-top: 20px; }
+        .setlist-card { background: #2c2c2c; padding: 15px; border-radius: 10px; margin-bottom: 10px; cursor: pointer; border: 1px solid #444; }
+        .setlist-card:hover { border-color: #bb86fc; }
+        .card-title { font-weight: bold; font-size: 16px; color: #bb86fc; }
+        .card-meta { font-size: 12px; color: #b0b0b0; }
+
+        /* View Mode Styling */
+        #viewMode { display: none; background: #1e1e1e; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; z-index: 100; }
+        .view-content { white-space: pre-wrap; font-family: 'Courier New', monospace; color: #f1c40f; background: #121212; padding: 15px; border-radius: 8px; margin-top: 10px; }
+        .close-btn { background: #cf6679; padding: 10px; margin-bottom: 20px; width: auto; }
+    </style>
+</head>
+<body>
+
+<div id="mainApp" class="container">
+    <h2>Church Setlist Pro</h2>
+
+    <div class="header-fields">
+        <div>
+            <label>Service Date</label>
+            <input type="date" id="serviceDate">
+        </div>
+        <div>
+            <label>Worship Leader</label>
+            <input type="text" id="worshipLeader" placeholder="Name">
+        </div>
+    </div>
+
+    <div class="song-section opening">
+        <h3>1. OPENING SONG</h3>
+        <input type="text" id="opTitle" placeholder="Song Title" style="margin-bottom:5px;">
+        <input type="url" id="opLink" placeholder="YouTube/Reference Link" style="margin-bottom:5px;">
+        <textarea id="opChords" placeholder="Paste Chords & Lyrics here..."></textarea>
+    </div>
+
+    <div class="song-section praise">
+        <h3>2. PRAISE SONG</h3>
+        <input type="text" id="prTitle" placeholder="Song Title" style="margin-bottom:5px;">
+        <input type="url" id="prLink" placeholder="YouTube/Reference Link" style="margin-bottom:5px;">
+        <textarea id="prChords" placeholder="Paste Chords & Lyrics here..."></textarea>
+    </div>
+
+    <div class="song-section worship">
+        <h3>3. WORSHIP SONG</h3>
+        <input type="text" id="woTitle" placeholder="Song Title" style="margin-bottom:5px;">
+        <input type="url" id="woLink" placeholder="YouTube/Reference Link" style="margin-bottom:5px;">
+        <textarea id="woChords" placeholder="Paste Chords & Lyrics here..."></textarea>
+    </div>
+
+    <div class="controls">
+        <button class="btn-green" onclick="saveFullSetlist()">💾 SAVE FULL SETLIST</button>
+        <button class="btn-red" onclick="clearForm()">🗑️ CLEAR ALL</button>
+    </div>
+
+    <div class="history">
+        <h3>Saved Lineups</h3>
+        <div id="historyList"></div>
+    </div>
+</div>
+
+<div id="viewMode">
+    <button class="close-btn" onclick="closeView()">← BACK TO LIST</button>
+    <h2 id="viewHeading" style="text-align:left;"></h2>
+    <div id="viewDetails"></div>
+</div>
+
+<script>
+    document.getElementById('serviceDate').valueAsDate = new Date();
+
+    function saveFullSetlist() {
+        const setlist = {
+            id: Date.now(),
+            date: document.getElementById('serviceDate').value,
+            leader: document.getElementById('worshipLeader').value || "No Leader",
+            opening: { title: document.getElementById('opTitle').value, link: document.getElementById('opLink').value, chords: document.getElementById('opChords').value },
+            praise: { title: document.getElementById('prTitle').value, link: document.getElementById('prLink').value, chords: document.getElementById('prChords').value },
+            worship: { title: document.getElementById('woTitle').value, link: document.getElementById('woLink').value, chords: document.getElementById('woChords').value }
+        };
+
+        if(!setlist.opening.title && !setlist.praise.title && !setlist.worship.title) {
+            return alert("Maglagay naman ng kahit isang kanta!");
+        }
+
+        const allSets = JSON.parse(localStorage.getItem('churchSetlistStorage') || '[]');
+        allSets.unshift(setlist);
+        localStorage.setItem('churchSetlistStorage', JSON.stringify(allSets));
+        
+        alert("Setlist Saved!");
+        clearForm();
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const allSets = JSON.parse(localStorage.getItem('churchSetlistStorage') || '[]');
+        const list = document.getElementById('historyList');
+        list.innerHTML = allSets.map(s => `
+            <div class="setlist-card" onclick="openSetlist(${s.id})">
+                <div class="card-title">Setlist: ${s.date}</div>
+                <div class="card-meta">Leader: ${s.leader} | Songs: ${s.opening.title || '?'}, ${s.praise.title || '?'}, ${s.worship.title || '?'}</div>
+            </div>
+        `).join('');
+    }
+
+    function openSetlist(id) {
+        const allSets = JSON.parse(localStorage.getItem('churchSetlistStorage') || '[]');
+        const s = allSets.find(item => item.id === id);
+        
+        document.getElementById('viewHeading').innerText = "Lineup for " + s.date;
+        document.getElementById('viewDetails').innerHTML = `
+            <p><strong>Leader:</strong> ${s.leader}</p>
+            <hr>
+            <h3 style="color:#03dac6">OPENING: ${s.opening.title}</h3>
+            ${s.opening.link ? `<a href="${s.opening.link}" target="_blank" style="color:#03dac6">Link: Reference Video</a>` : ''}
+            <div class="view-content">${s.opening.chords}</div>
+            
+            <h3 style="color:#6200ee; margin-top:30px;">PRAISE: ${s.praise.title}</h3>
+            ${s.praise.link ? `<a href="${s.praise.link}" target="_blank" style="color:#6200ee">Link: Reference Video</a>` : ''}
+            <div class="view-content">${s.praise.chords}</div>
+            
+            <h3 style="color:#cf6679; margin-top:30px;">WORSHIP: ${s.worship.title}</h3>
+            ${s.worship.link ? `<a href="${s.worship.link}" target="_blank" style="color:#cf6679">Link: Reference Video</a>` : ''}
+            <div class="view-content">${s.worship.chords}</div>
+        `;
+        document.getElementById('viewMode').style.display = 'block';
+    }
+
+    function closeView() { document.getElementById('viewMode').style.display = 'none'; }
+
+    function clearForm() {
+        const ids = ['worshipLeader', 'opTitle', 'opLink', 'opChords', 'prTitle', 'prLink', 'prChords', 'woTitle', 'woLink', 'woChords'];
+        ids.forEach(id => document.getElementById(id).value = "");
+    }
+
+    renderHistory();
+</script>
+
+</body>
+</html>
